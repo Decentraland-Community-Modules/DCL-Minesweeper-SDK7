@@ -45,5 +45,5 @@
 		"ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"
 	],
 	"featureToggles": {},
-	"worldConfiguration": { "dclName":"TheCryptoTrader.dcl.eth" }
+	"worldConfiguration": { "name":"Minesweeper.dcl.eth" }
 }

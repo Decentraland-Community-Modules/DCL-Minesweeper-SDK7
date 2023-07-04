@@ -4,6 +4,9 @@ import { Quaternion, Vector3 } from "@dcl/sdk/math";
 /*      AUDIO MANAGER
     controls audio components in-scene, mainly lobby (game idle) and
     battle (during wave) music.
+
+    Author: TheCryptoTrader69 (Alex Pazder)
+    Contact: TheCryptoTrader69@gmail.com
 */
 export class AudioManager
 {

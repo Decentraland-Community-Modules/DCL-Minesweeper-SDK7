@@ -1,3 +1,14 @@
+import { ColliderLayer, Entity, GltfContainer, Transform, TransformType, engine } from "@dcl/sdk/ecs";
+import { Quaternion, Vector3 } from "@dcl/sdk/math";
+import { DifficultyData } from "./data/minesweeper-difficulties";
+import { MinesweeperMenu } from "./minesweeper-menu";
+import Dictionary from "../utilities/collections";
+import { MinesweeperTile } from "./minesweeper-tile";
+import { TimerDisplayManager } from "./timer-display-system";
+import { MinesweeperFlag, MinesweeperFlagPool } from "./minesweeper-flag";
+import { GAME_STATE_COLOURS, GAME_STATE_LABELS } from "./config/minesweeper-display-config";
+import { AudioManager } from "../utilities/audio-manager";
+
 /*     GAME MANAGER
     this module is used to manage the initialization and processing
     of the minesweeper game field. the bulk of functionality can be found
@@ -7,27 +18,14 @@
     all game components are parented below this module, so if you wish to remove
     the minesweeper field from your game during runtime all that has to be done is
     toggle/destroy this one object.
-
     
     Author: TheCryptoTrader69 (Alex Pazder)
     Contact: thecryptotrader69@gmail.com
 */
-
-import { ColliderLayer, Entity, GltfContainer, Transform, TransformType, engine } from "@dcl/sdk/ecs";
-import { Quaternion, Vector3 } from "@dcl/sdk/math";
-import { DifficultyData } from "./data/minesweeper-difficulties";
-import { MinesweeperMenu } from "./minesweeper-menu";
-import Dictionary from "../utilities/collections";
-import { MinesweeperTile } from "./minesweeper-tile";
-import { TimerDisplayManager, TimerDisplaySystem } from "./timer-display-system";
-import { MinesweeperFlag, MinesweeperFlagPool } from "./minesweeper-flag";
-import { GAME_STATE_COLOURS, GAME_STATE_LABELS } from "./config/minesweeper-display-config";
-import { AudioManager } from "../utilities/audio-manager";
-
 export class MinesweeperManager
 {
   //debugging setting
-  public static IsDebugging:boolean = true;
+  public static IsDebugging:boolean = false;
 
   //access pocketing
   private static instance:undefined|MinesweeperManager;
@@ -479,7 +477,6 @@ export class MinesweeperManager
           if(tile.type == 1) 
           {
             tile.SetAnimationState(2);
-            console.log("test");
           }
         }
       }

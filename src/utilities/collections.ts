@@ -10,6 +10,7 @@ export interface IKeyCollection<T> {
     removeItem(key: string): T;
     values(): T[];
 }
+/** TODO */
 export class List<T> {
     private items: Array<T>;
 

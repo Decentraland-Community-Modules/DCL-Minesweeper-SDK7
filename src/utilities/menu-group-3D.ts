@@ -1,3 +1,38 @@
+import { Entity, Transform, engine, TextShape, GltfContainer, ColliderLayer, Font, PBTextShape, TextAlignMode } from "@dcl/sdk/ecs";
+import { Vector3, Quaternion, Color4 } from "@dcl/sdk/math";
+import { Dictionary, List } from "../utilities/collections";
+
+/** menu display types */
+export enum Menu3DModelTypes
+{
+    //empty
+    EMPTY = "",
+    //panels
+    PANEL_SQUARE = "models/utilities/Menu3D_Panel_Square.glb",
+    PANEL_LONG = "models/utilities/Menu3D_Panel_Long.glb",
+    //buttons
+    BUTTON_SQUARE = "models/utilities/Menu3D_Button_Square.glb",
+    BUTTON_LONG = "models/utilities/Menu3D_Button_Long.glb",
+    BUTTON_NARROW ="models/utilities/Menu3D_Button_Narrow.glb",
+}
+/** menu object transform adjustment types */
+export enum Menu3DTransformAdjustmentTypes
+{
+    POSITION,
+    ROTATION,
+    SCALE,
+}
+/** menu text display adjustment types */
+export enum Menu3DDisplayAdjustmentTypes
+{
+    FONT,
+    LINESPACING,
+    ALIGNMENT,
+    WIDTH,
+    HEIGHT,
+    WRAPPING
+}
+
 /*      MENU GROUP 3D
     used to create a 3d menu group in the game scene. menu objects can be created and 
     organized through an instance of this manager.
@@ -9,35 +44,17 @@
     Author: TheCryptoTrader69 (Alex Pazder)
     Contact: TheCryptoTrader69@gmail.com
 */
-import { Entity, Transform, engine, TextShape, GltfContainer, ColliderLayer, EntityState, EngineInfo, MeshRenderer, Font, PBTextShape, TextAlignMode } from "@dcl/sdk/ecs";
-import { Vector3, Quaternion, Color4 } from "@dcl/sdk/math";
-import { Dictionary, List } from "../utilities/collections";
-
-/**
- * used to manage a group of 3D menu objects
- */
-export class MenuGroup3D {
-    //menu model locations
-    //  TODO: set this as a static after SDK bugs are fixed
-    private static MENU_OBJECT_MODELS: string[] =
-    [
-        //empty
-        "",
-        //panels
-        "models/utilities/Menu3D_Panel_Square.glb",
-        "models/utilities/Menu3D_Panel_Long.glb",
-        //buttons
-        "models/utilities/Menu3D_Button_Square.glb",
-        "models/utilities/Menu3D_Button_Long.glb",
-        "models/utilities/Menu3D_Button_Narrow.glb",
-    ];
-
-    //parental object for menu group, holds all associated menu objects
+export class MenuGroup3D  {
+    /** parental object for menu group, holds all associated menu objects */
     public groupParent: Entity;
     
-    //collections for entity access
-    private menuList: List<MenuObject3D>;
-    private menuDict: Dictionary<MenuObject3D>;
+    /** menu's current colour */
+    private textColour: Color4 = Color4.Black();
+
+    /** list of all attached menu objects */
+    private menuObjectList: List<MenuObject3D>;
+    /** dict of all attached menu objects, key is object's name */
+    private menuObjectDict: Dictionary<MenuObject3D>;
 
     //constructor
     constructor() {
@@ -45,112 +62,141 @@ export class MenuGroup3D {
         this.groupParent = engine.addEntity();
         Transform.create(this.groupParent,
         ({
-            position: Vector3.create(8, 1, 8), //defaults to center of first parcel
+            position: Vector3.create(8, 1, 8), //defaults to center of parcel
             scale: Vector3.create(1, 1, 1),
             rotation: Quaternion.fromEulerDegrees(0, 0, 0)
         }));
 
         //initialize collections
-        this.menuList = new List<MenuObject3D>();
-        this.menuDict = new Dictionary<MenuObject3D>();
+        this.menuObjectList = new List<MenuObject3D>();
+        this.menuObjectDict = new Dictionary<MenuObject3D>();
     }
     
     /**
-     * sets the state of the primary menu tree
+     * sets display state of the menu group
      * @param state new display state for menu
      */
     public SetMenuState(state: boolean) {
-        //TODO: replace when you can hide/soft remove entities again
+        //TODO: replace when you can hide/change visibility of entities again
         //enable menu
-        if (state) Transform.getMutable(this.groupParent).scale = Vector3.One(); 
+        if (state)
+        {
+            Transform.getMutable(this.groupParent).scale = Vector3.One(); 
+        }
         //disable menu
-        else Transform.getMutable(this.groupParent).scale = Vector3.Zero(); 
+        else 
+        {
+            Transform.getMutable(this.groupParent).scale = Vector3.Zero(); 
+        }
     }
 
     /**
      * modifies the transform details of the menu group parent object
-     * @param type 0->position, 1->scale, 2->rotation
-     * @param vect new value
+     * @param type type of adjustment to be made
      */
-    public AdjustMenuParent(type: number, vect: Vector3) {
+    public AdjustMenuParent(type: Menu3DTransformAdjustmentTypes, x: number, y: number, z: number) {
+        //get transform mod
+        const transform = Transform.getMutable(this.groupParent);
+        //process adjustment
         switch (type) {
-            case 0:
-                Transform.getMutable(this.groupParent).position = vect;
+            case Menu3DTransformAdjustmentTypes.POSITION:
+                transform.position.x = x;
+                transform.position.y = y;
+                transform.position.z = z;
                 break;
-            case 1:
-                Transform.getMutable(this.groupParent).scale = vect;
+            case Menu3DTransformAdjustmentTypes.SCALE:
+                transform.scale.x = x;
+                transform.scale.y = y;
+                transform.scale.z = z;
                 break;
-            case 2:
-                Transform.getMutable(this.groupParent).rotation = Quaternion.fromEulerDegrees(vect.x, vect.y, vect.z);
+            case Menu3DTransformAdjustmentTypes.ROTATION:
+                transform.rotation = Quaternion.fromEulerDegrees(x, y, z);
                 break;
         }
     }
 
     /**
-     * returns the requested menu object
-     * @param objName name of targeted object
-     * @returns targeted object
+     * returns menu object container based on indexing
+     * @param objName name of targeted menu object
+     * @returns menu object container
      */
     public GetMenuObject(objName: string): MenuObject3D {
-        return this.menuDict.getItem(objName);
+        return this.menuObjectDict.getItem(objName);
     }
 
     /**
-     * returns the requested menu object
+     * returns entity containing the targeted text mesh component based on indexing
      * @param objName name of targeted object
      * @param textName name of targeted text (child on targeted object)
-     * @returns object reference
+     * @returns entity reference
      */
     public GetMenuTextObject(objName: string, textName: string): Entity {
         return this.GetMenuObject(objName).GetTextObject(textName);
     }
 
     /**
-     * returns the requested menu object
+     * returns mutable text mesh component based on indexing
      * @param objName name of targeted object
      * @param textName name of targeted text (child on targeted object)
-     * @returns text shape reference
+     * @returns mutable text shape reference
      */
     public GetMenuObjectText(objName: string, textName: string): PBTextShape {
         return this.GetMenuObject(objName).GetObjectText(textName);
     }
 
     /**
-     * prepares a menu object of the given size/shape, with the given text
-     * @param name access label for menu to be registered under
+     * prepares a menu object of the given type, under the given parent
+     * @param name requested name for new menu object (if menu object of name already exists then function fails)
      * @param type index of menu object to be used as base
-     * @param parent target parent
+     * @param parent target parent, if no value is given object becomes a child of the core menu group parent (if menu object of index doesn't exists then function fails)
      */
-    public AddMenuObject(name: string, type: number, parent: string = '') {
-        //create menu entity
-        const tmp: MenuObject3D = new MenuObject3D(MenuGroup3D.MENU_OBJECT_MODELS[type], name);
+    public AddMenuObject(name: string, type: Menu3DModelTypes, parent: string = '') {
+        //ensure menu object does not exist
+        if(this.menuObjectDict.containsKey(name)) return Error("Menu Group 3D: ERROR - failed to add menu object, object name="+name+" already exists");
+        //ensure targeted parent obj exists
+        if(parent != '' && !this.menuObjectDict.containsKey(parent)) return Error("Menu Group 3D: ERROR - failed to add menu object, object parent="+parent+" doesn't exists");
 
-        //if no target parent, set as child under main object
+        //create menu entity
+        const tmp: MenuObject3D = new MenuObject3D(name, type);
+
+        //process parent assignment
+        //  new obj is parented under targeted parent
         if (parent != '') Transform.getMutable(tmp.entity).parent = this.GetMenuObject(parent).entity;
-        //if target parent, set as child under target
+        //  new obj is parented under group parent
         else Transform.getMutable(tmp.entity).parent = this.groupParent;
 
         //register object to collections
-        this.menuList.addItem(tmp);
-        this.menuDict.addItem(name, tmp);
+        this.menuObjectList.addItem(tmp);
+        this.menuObjectDict.addItem(name, tmp);
+
+        return tmp
     }
 
     /**
-     * changes a targeted menu object entity
+     * modifies the transform details of the targeted menu object entity
      * @param name access label of targeted object
-     * @param type 0->position, 1->scale, 2->rotation
-     * @param vect new value of targeted type
+     * @param type type of adjustment to be made
      */
-    public AdjustMenuObject(name: string, type: number, vect: Vector3) {
+    public AdjustMenuObject(name: string, type: Menu3DTransformAdjustmentTypes, x: number, y: number, z: number) {
+        //ensure menu object of the requested menu object exists
+        if(!this.menuObjectDict.containsKey(name)) return Error("Menu Group 3D: ERROR - failed to adjust menu object, object name="+name+" doesn't exists");
+        
+        //get transform mod
+        const transform = Transform.getMutable(this.GetMenuObject(name).entity);
+        //process adjustment
         switch (type) {
-            case 0:
-                Transform.getMutable(this.GetMenuObject(name).entity).position = vect;
+            case Menu3DTransformAdjustmentTypes.POSITION:
+                transform.position.x = x;
+                transform.position.y = y;
+                transform.position.z = z;
                 break;
-            case 1:
-                Transform.getMutable(this.GetMenuObject(name).entity).scale = vect;
+            case Menu3DTransformAdjustmentTypes.SCALE:
+                transform.scale.x = x;
+                transform.scale.y = y;
+                transform.scale.z = z;
                 break;
-            case 2:
-                Transform.getMutable(this.GetMenuObject(name).entity).rotation = Quaternion.fromEulerDegrees(vect.x, vect.y, vect.z);
+            case Menu3DTransformAdjustmentTypes.ROTATION:
+                transform.rotation = Quaternion.fromEulerDegrees(x, y, z);
                 break;
         }
     }
@@ -160,9 +206,10 @@ export class MenuGroup3D {
      * @param nameObj access label of targeted object
      * @param nameTxt access label for text object 
      * @param text text that will be displayed
+     * @returns returns instance of entity containing new text mesh
      */
-    public AddMenuText(nameObj: string, nameTxt: string, text: string) {
-        this.GetMenuObject(nameObj).AddTextObject(nameTxt, text, this.textColour);
+    public AddMenuText(nameObj: string, nameTxt: string, text: string): Entity {
+        return this.GetMenuObject(nameObj).AddTextObject(nameTxt, text, this.textColour);
     }
 
     /**
@@ -172,28 +219,41 @@ export class MenuGroup3D {
      * @param text new display text
      */
     public SetMenuText(nameObj: string, nameTxt: string, text: string) {
-        this.menuDict.getItem(nameObj).ChangeText(nameTxt, text);
+        this.menuObjectDict.getItem(nameObj).ChangeText(nameTxt, text);
     }
 
-    //changes a text object's textshape settings
-    public AdjustTextObject(nameObj: string, nameTxt: string, type: number, value: Vector3) {
-        this.menuDict.getItem(nameObj).AdjustTextObject(nameTxt, type, value);
+    /**
+     * modifies the transform details of the targeted menu text object entity
+     * @param nameObj access label of targeted object
+     * @param nameTxt access label for text object 
+     * @param type type of adjustment to be made
+     */
+    public AdjustTextObject(nameObj: string, nameTxt: string, type: Menu3DTransformAdjustmentTypes, x: number, y: number, z: number) {
+        this.menuObjectDict.getItem(nameObj).AdjustTextObject(nameTxt, type, x, y, z);
     }
 
-    //changes a text object's textshape settings
-    public AdjustTextDisplay(nameObj: string, nameTxt: string, type: number, value: number, value1: number = 1) {
-        this.menuDict.getItem(nameObj).AdjustTextDisplay(nameTxt, type, value, value1);
+    /**
+     * modifies the display settings of the targeted menu text object entity
+     * @param nameObj access label of targeted object
+     * @param nameTxt access label for text object 
+     * @param type type of adjustment to be made
+     */
+    public AdjustTextDisplay(nameObj: string, nameTxt: string, type: Menu3DDisplayAdjustmentTypes, value: number, value1: number = 1) {
+        this.menuObjectDict.getItem(nameObj).AdjustTextDisplay(nameTxt, type, value, value1);
     }
 
-    private textColour: Color4 = Color4.Black();
+    /**
+     * modifies the display colour of the entire menu 
+     * @param colour new menu text colour
+     */
     public SetColour(colour: Color4) {
         //change default colour
         this.textColour = colour;
 
         //apply change to all menu text objects
-        for (var i: number = 0; i < this.menuList.size(); i++) {
-            for (var j: number = 0; j < this.menuList.getItem(i).textList.size(); j++) {
-                TextShape.getMutable(this.menuList.getItem(i).textList.getItem(j)).textColor = this.textColour;
+        for (var i: number = 0; i < this.menuObjectList.size(); i++) {
+            for (var j: number = 0; j < this.menuObjectList.getItem(i).textList.size(); j++) {
+                TextShape.getMutable(this.menuObjectList.getItem(i).textList.getItem(j)).textColor = this.textColour;
             }
         }
     }
@@ -206,30 +266,31 @@ export class MenuGroup3D {
  * several children textshape entities.
  */
 export class MenuObject3D {
-    //access label
+    /** access label */
     public Name: string;
 
-    //e
+    /** entity reference */
     public entity: Entity;
 
-    //collections of all text entities
+    /** list of all attatched text entities*/ 
     textList: List<Entity>;
+    /** dict of all attatched text entities*/
     textDict: Dictionary<Entity>;
 
-    //constructor
-    constructor(model: string, nam: string) {
-        //create entity object
-        this.entity = engine.addEntity();
+    /** creates a new 3D menu object of the given name with the given display model */
+    constructor(name: string, model: Menu3DModelTypes) {
+        //set access name
+        this.Name = name;
 
-        //add transform
+        //create display entity
+        this.entity = engine.addEntity();
         Transform.create(this.entity,
         ({
             position: Vector3.create(0, 0, 0),
             scale: Vector3.create(1, 1, 1),
             rotation: Quaternion.fromEulerDegrees(0, 0, 0)
         }));
-
-        //if model def, add custom object
+        //if requested, add custom display object
         if (model != '')
         {
             GltfContainer.create(this.entity, {
@@ -239,20 +300,27 @@ export class MenuObject3D {
             });
         }
 
-        //set access name
-        this.Name = nam;
-
-        //collections
+        //add to collections
         this.textList = new List<Entity>();
         this.textDict = new Dictionary<Entity>();
     }
 
+    /**
+     * sets the menu object's display state
+     * @param state new display state
+     */
     public SetObjectState(state: boolean) {
         //TODO: replace when you can hide/soft remove entities again
         //enable menu
-        if (state) Transform.getMutable(this.entity).scale = Vector3.One(); 
+        if (state)
+        {
+            Transform.getMutable(this.entity).scale = Vector3.One(); 
+        }
         //disable menu
-        else Transform.getMutable(this.entity).scale = Vector3.Zero(); 
+        else 
+        {
+            Transform.getMutable(this.entity).scale = Vector3.Zero();
+        }
     }
 
     /** returns text object's entity reference */
@@ -267,11 +335,9 @@ export class MenuObject3D {
 
     //prepares a text object with the given text, 
     //  registered under the given name
-    public AddTextObject(name: string, text: string, colour: Color4) : PBTextShape {
-        //create entity
+    public AddTextObject(name: string, text: string, colour: Color4): Entity {
+        //create texh mesh entity
         const tmp: Entity = engine.addEntity();
-        
-        //add transform
         Transform.create(tmp,
         ({
             position: Vector3.create(0, 0, 0),
@@ -292,25 +358,32 @@ export class MenuObject3D {
             font: Font.F_SANS_SERIF
         });
 
-        //register object to collections
+        //add to collections
         this.textList.addItem(tmp);
         this.textDict.addItem(name, tmp);
 
-        return tmpTS;
+        return tmp;
     }
 
     //changes a targeted text object entity
     //  type: 0->position, 1->scale, 2->rotation
-    public AdjustTextObject(name: string, type: number, vect: Vector3) {
+    public AdjustTextObject(name: string, type: Menu3DTransformAdjustmentTypes, x: number, y: number, z: number) {
+        //get transform mod
+        const transform = Transform.getMutable(this.textDict.getItem(name));
+        //process adjustment
         switch (type) {
-            case 0:
-                Transform.getMutable(this.textDict.getItem(name)).position = vect;
+            case Menu3DTransformAdjustmentTypes.POSITION:
+                transform.position.x = x;
+                transform.position.y = y;
+                transform.position.z = z;
                 break;
-            case 1:
-                Transform.getMutable(this.textDict.getItem(name)).scale = vect;
+            case Menu3DTransformAdjustmentTypes.SCALE:
+                transform.scale.x = x;
+                transform.scale.y = y;
+                transform.scale.z = z;
                 break;
-            case 2:
-                Transform.getMutable(this.textDict.getItem(name)).rotation = Quaternion.fromEulerDegrees(vect.x, vect.y, vect.z);
+            case Menu3DTransformAdjustmentTypes.ROTATION:
+                transform.rotation = Quaternion.fromEulerDegrees(x, y, z);
                 break;
         }
     }
@@ -322,16 +395,26 @@ export class MenuObject3D {
      * @param value primary value to set
      * @param value1 used as secondary alignment value bc for some reason v/h alignments are NOT split...
      */
-    public AdjustTextDisplay(name: string, type: number, value: number, value1: number = 1) {
+    public AdjustTextDisplay(name: string, type: Menu3DDisplayAdjustmentTypes, value: number, value1: number = 1) {
         const textShape:PBTextShape = TextShape.getMutable(this.textDict.getItem(name));
         switch (type) {
-            case 0:
+            case Menu3DDisplayAdjustmentTypes.FONT:
                 textShape.fontSize = value;
                 break;
-            case 1:
+            case Menu3DDisplayAdjustmentTypes.LINESPACING:
                 textShape.lineSpacing = value;
                 break;
-            case 2:
+            case Menu3DDisplayAdjustmentTypes.WIDTH:
+                textShape.width = value;
+                break;
+            case Menu3DDisplayAdjustmentTypes.HEIGHT:
+                textShape.height = value;
+                break;
+            case Menu3DDisplayAdjustmentTypes.WRAPPING:
+                if(value == 1) textShape.textWrapping = true;
+                else textShape.textWrapping = false;
+                break;
+            case Menu3DDisplayAdjustmentTypes.ALIGNMENT:
                 //TODO: change this when the interface is fixed to support v/h seperately 
                 switch (value) {
                     case 0:

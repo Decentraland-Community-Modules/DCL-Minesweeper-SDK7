@@ -1,4 +1,8 @@
-/*     TILE
+import { Animator, ColliderLayer, Entity, GltfContainer, InputAction, TextShape, Transform, engine, pointerEventsSystem } from "@dcl/sdk/ecs";
+import { Vector3, Quaternion } from "@dcl/sdk/math";
+import { TILE_TEXT_VALUE, TILE_TEXT_SIZE, TILE_TEXT_COLOUR, TILE_OBJECT, TILE_ANIMS } from "./config/minesweeper-display-config";
+
+/*     MINESWEEPER TILE
     represents a single tile on the gameboard. holds data about
     whether the location is un/covered, is a mine, or is flagged.
     this component contains both the tile shape and text shape,
@@ -9,10 +13,6 @@
     Author: TheCryptoTrader69 (Alex Pazder)
     Contact: thecryptotrader69@gmail.com
 */
-
-import { Animator, ColliderLayer, Entity, GltfContainer, InputAction, TextShape, Transform, engine, pointerEventsSystem } from "@dcl/sdk/ecs";
-import { Vector3, Quaternion } from "@dcl/sdk/math";
-import { TILE_TEXT_VALUE, TILE_TEXT_SIZE, TILE_TEXT_COLOUR, TILE_OBJECT, TILE_ANIMS } from "./config/minesweeper-display-config";
 export class MinesweeperTile 
 {
     //position of this tile on the gamefield
